@@ -1,21 +1,14 @@
 package br.com.alura.estoque.repository;
 
-import android.os.AsyncTask;
-
-import androidx.annotation.NonNull;
-
-import java.io.IOException;
 import java.util.List;
 
 import br.com.alura.estoque.asynctask.BaseAsyncTask;
 import br.com.alura.estoque.database.dao.ProdutoDAO;
 import br.com.alura.estoque.model.Produto;
 import br.com.alura.estoque.retrofit.EstoqueRetrofit;
+import br.com.alura.estoque.retrofit.callback.BaseCallback;
 import br.com.alura.estoque.retrofit.service.ProdutoService;
 import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.internal.EverythingIsNonNull;
 
 public class ProdutoRepository {
 
@@ -42,26 +35,17 @@ public class ProdutoRepository {
     private void buscarProdutosNaAPI(DadosCarregadosCallback<List<Produto>> callback) {
         Call<List<Produto>> call = service.buscaTodos();
 
-        call.enqueue(new Callback<List<Produto>>() {
+        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<List<Produto>>() {
             @Override
-            @EverythingIsNonNull
-            public void onResponse(Call<List<Produto>> call, Response<List<Produto>> response) {
-                if(response.isSuccessful()){
-                    List<Produto> produtosNovos = response.body();
-                    if(produtosNovos != null){
-                        atualizarInternamente(produtosNovos, callback);
-                    }
-                }else {
-                    callback.quandoFalha("Resposta não sucedida");
-                }
+            public void quandoSucesso(List<Produto> produtosNovos) {
+                atualizarInternamente(produtosNovos, callback);
             }
 
             @Override
-            @EverythingIsNonNull
-            public void onFailure(Call<List<Produto>> call, Throwable t) {
-                callback.quandoFalha("Falha de comunicação: " + t.getMessage());
+            public void quandoFalha(String erro) {
+                callback.quandoFalha(erro);
             }
-        });
+        }));
     }
 
     private void atualizarInternamente(List<Produto> produtosNovos, DadosCarregadosCallback<List<Produto>> callback) {
@@ -74,37 +58,57 @@ public class ProdutoRepository {
 
     public void salva(Produto produto, DadosCarregadosCallback<Produto> callback) {
         salvarNaApi(produto, callback);
-
     }
 
     private void salvarNaApi(Produto produto, DadosCarregadosCallback<Produto> callback) {
         Call<Produto> call = service.salva(produto);
-        call.enqueue(new Callback<Produto>() {
+        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Produto>() {
             @Override
-            @EverythingIsNonNull
-            public void onResponse(Call<Produto> call, Response<Produto> response) {
-                if (response.isSuccessful()) {
-                    Produto produtoSalvo = response.body();
-                    if(produtoSalvo != null){
-                        salvarInternamente(produtoSalvo, callback);
-                    }
-                }else{
-                    callback.quandoFalha("Resposta não sucedida");
-                }
+            public void quandoSucesso(Produto produtoSalvo) {
+                salvarInternamente(produtoSalvo, callback);
             }
 
             @Override
-            @EverythingIsNonNull
-            public void onFailure(Call<Produto> call, Throwable t) {
-                callback.quandoFalha("Falha de comunicação: " + t.getMessage());
+            public void quandoFalha(String erro) {
+                callback.quandoFalha(erro);
             }
-        });
+        }));
     }
 
     private void salvarInternamente(Produto produtoSalvo, DadosCarregadosCallback<Produto> callback) {
         new BaseAsyncTask<>(() -> {
             long id = dao.salva(produtoSalvo);
             return dao.buscaProduto(id);
+        }, callback::quandoSucesso)
+                .execute();
+    }
+
+    public void edita(Produto produto, DadosCarregadosCallback<Produto> callback) {
+
+        Call<Produto> call  = service.edita(produto.getId(), produto);
+        editaNaApi(produto, callback, call);
+
+
+    }
+
+    private void editaNaApi(Produto produto, DadosCarregadosCallback<Produto> callback, Call<Produto> call) {
+        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Produto>() {
+            @Override
+            public void quandoSucesso(Produto resultado) {
+                editaInternamente(produto, callback);
+            }
+
+            @Override
+            public void quandoFalha(String erro) {
+                callback.quandoFalha(erro);
+            }
+        }));
+    }
+
+    private void editaInternamente(Produto produto, DadosCarregadosCallback<Produto> callback) {
+        new BaseAsyncTask<>(() -> {
+            dao.atualiza(produto);
+            return produto;
         }, callback::quandoSucesso)
                 .execute();
     }

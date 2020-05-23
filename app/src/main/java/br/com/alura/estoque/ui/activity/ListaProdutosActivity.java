@@ -50,7 +50,7 @@ public class ListaProdutosActivity extends AppCompatActivity {
             public void quandoFalha(String erro) {
                 Toast.makeText(
                         ListaProdutosActivity.this,
-                        "Não foi possível carregar os produtos novos",
+                        "Não foi possível carregar os produtos novos - ui",
                         Toast.LENGTH_SHORT).show();
             }
         });
@@ -99,17 +99,23 @@ public class ListaProdutosActivity extends AppCompatActivity {
 
     private void abreFormularioEditaProduto(int posicao, Produto produto) {
         new EditaProdutoDialog(this, produto,
-                produtoEditado -> edita(posicao, produtoEditado))
-                .mostra();
-    }
+                produtoCriado -> repository.edita(produtoCriado,
+                        new ProdutoRepository.DadosCarregadosCallback<Produto>() {
+                    @Override
+                    public void quandoSucesso(Produto produtoEditado) {
+                        adapter.edita(posicao, produtoEditado);
+                    }
 
-    private void edita(int posicao, Produto produto) {
-        new BaseAsyncTask<>(() -> {
-            dao.atualiza(produto);
-            return produto;
-        }, produtoEditado ->
-                adapter.edita(posicao, produtoEditado))
-                .execute();
+                    @Override
+                    public void quandoFalha(String erro) {
+                        Toast.makeText(
+                                ListaProdutosActivity.this,
+                                "Nao foi possivel carregar o produto",
+                                Toast.LENGTH_SHORT).show();
+
+                    }
+                }))
+                .mostra();
     }
 
 
