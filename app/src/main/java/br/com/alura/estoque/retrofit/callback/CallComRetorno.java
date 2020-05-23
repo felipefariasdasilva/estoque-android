@@ -6,11 +6,15 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.internal.EverythingIsNonNull;
 
-public class BaseCallback<T> implements Callback<T> {
+import static br.com.alura.estoque.retrofit.callback.MensagemCallback.MENSAGEM_ERRO_FALHA_COMUNICACAO;
+import static br.com.alura.estoque.retrofit.callback.MensagemCallback.MENSAGEM_ERRO_RESPOSTAR_NAO_SUCEDIDA;
+
+public class CallComRetorno<T> implements Callback<T> {
+
 
     private final RespostaCallback<T> callback;
 
-    public BaseCallback(RespostaCallback<T> callback) {
+    public CallComRetorno(RespostaCallback<T> callback) {
         this.callback = callback;
     }
 
@@ -19,21 +23,19 @@ public class BaseCallback<T> implements Callback<T> {
     public void onResponse(Call<T> call, Response<T> response) {
         if(response.isSuccessful()){
             T resultado = response.body();
+
             if(resultado != null){
-                // notifica que tem resposta com sucesso
                 callback.quandoSucesso(resultado);
-            }else{
-                // notifica falha
-                callback.quandoFalha("Resposta não sucedida");
             }
+        }else{
+            callback.quandoFalha(MENSAGEM_ERRO_RESPOSTAR_NAO_SUCEDIDA);
         }
     }
 
     @Override
     @EverythingIsNonNull
     public void onFailure(Call<T> call, Throwable t) {
-        // notifica falha
-        callback.quandoFalha("Falha de comunicação: " + t.getMessage());
+        callback.quandoFalha(MENSAGEM_ERRO_FALHA_COMUNICACAO + t.getMessage());
     }
 
     public interface RespostaCallback<T> {
